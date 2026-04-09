@@ -28,11 +28,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install Python dependencies
         run: |
-          pip install jupyter matplotlib numpy pandas plotly kaleido
+          pip install jupyter plotly kaleido
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
