@@ -1,0 +1,42 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - "animations/media/videos/**/*.mp4"
+
+website:
+  title: "From Gradients to Correlated Noise"
+  description: "A blog series building intuition from per-sample gradients through memorization risks to cutting-edge differential privacy mechanisms."
+  site-url: https://grim-hitman0XX.github.io/blog/
+  repo-url: https://github.com/grim-hitman0XX/blog
+  repo-actions: [issue]
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: about.qmd
+        text: About
+    right:
+      - icon: github
+        href: https://github.com/grim-hitman0XX/blog
+  page-footer:
+    center: "Built with [Quarto](https://quarto.org/)"
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    highlight-style: github
+
+execute:
+  freeze: auto
+
+bibliography: references.bib
+html-math-method: katex
