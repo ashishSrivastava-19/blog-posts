@@ -2,7 +2,7 @@
 title: "How One Data Point Steers the Entire Model"
 subtitle: "Cooking something up..."
 author: "Ashish Srivastava"
-date: "Coming soon"
+date: "2026-04-12"
 categories: [gradients, privacy, per-sample]
 draft: false
 ---
