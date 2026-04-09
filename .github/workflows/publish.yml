@@ -31,7 +31,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install jupyter plotly kaleido
+          pip install jupyter numpy plotly kaleido
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
