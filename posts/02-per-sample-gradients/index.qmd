@@ -1,0 +1,10 @@
+---
+title: "How One Data Point Steers the Entire Model"
+subtitle: "Cooking something up..."
+author: "Ashish Srivastava"
+date: "2026-05-15"
+categories: [gradients, privacy, per-sample]
+draft: false
+---
+
+*Cooking something up...*

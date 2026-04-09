@@ -14,13 +14,13 @@ from pathlib import Path
 ANIMATIONS_DIR = Path(__file__).parent
 MEDIA_DIR = ANIMATIONS_DIR / "media"
 QUALITY = "-qh"  # -ql (low/480p), -qm (medium/720p), -qh (high/1080p), -qk (4k)
-FPS = "30"
+FPS = "60"
 
 # Map post folders to their scene files and scene class names
 SCENES = {
     "post_01": {
         "file": "post_01/scenes.py",
-        "scenes": ["UpdateRuleDissected", "GradientParliament", "GradientWeathervane"],
+        "scenes": ["UpdateRuleDissected", "GradientForces", "GradientFingerprint"],
     },
 }
 

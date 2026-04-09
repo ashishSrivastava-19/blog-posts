@@ -13,9 +13,10 @@ venv/
 # Jupyter
 .jupyter/
 
-# Manim intermediate files (keep media/ for rendered output)
-animations/post_*/media/
-!animations/media/
+# Manim intermediate files (keep final MP4s, ignore caches and fragments)
+animations/media/Tex/
+animations/media/texts/
+animations/media/videos/**/partial_movie_files/
 
 # OS
 .DS_Store

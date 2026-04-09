@@ -1,0 +1,276 @@
+/*-- scss:defaults --*/
+
+// ── Typography ──────────────────────────────────
+$font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !default;
+$font-family-monospace: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !default;
+$headings-font-weight: 700 !default;
+$font-size-base: 1.05rem !default;
+$line-height-base: 1.75 !default;
+$headings-line-height: 1.3 !default;
+$paragraph-margin-bottom: 1.3rem !default;
+
+// ── Color palette ───────────────────────────────
+$primary: #6366f1 !default;
+$link-color: #6366f1 !default;
+
+/*-- scss:rules --*/
+
+// ── CSS Custom Properties (light/dark adaptive) ─
+:root {
+  --accent: #6366f1;
+  --accent-secondary: #a855f7;
+  --accent-tertiary: #f43f5e;
+  --gradient-accent: linear-gradient(135deg, #6366f1, #a855f7, #f43f5e);
+  --gradient-subtle: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08));
+  --card-shadow: rgba(99, 102, 241, 0.12);
+  --card-shadow-hover: rgba(168, 85, 247, 0.2);
+  --badge-bg: rgba(99, 102, 241, 0.1);
+  --badge-color: #6366f1;
+}
+
+[data-bs-theme="dark"] {
+  --accent: #818cf8;
+  --accent-secondary: #c084fc;
+  --accent-tertiary: #fb7185;
+  --gradient-accent: linear-gradient(135deg, #818cf8, #c084fc, #fb7185);
+  --gradient-subtle: linear-gradient(135deg, rgba(129,140,248,0.1), rgba(192,132,252,0.1));
+  --card-shadow: rgba(129, 140, 248, 0.1);
+  --card-shadow-hover: rgba(192, 132, 252, 0.25);
+  --badge-bg: rgba(129, 140, 248, 0.15);
+  --badge-color: #a5b4fc;
+}
+
+// ── Typography ──────────────────────────────────
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin-top: 2.8em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+h3 {
+  margin-top: 2em;
+}
+
+// ── Layout ──────────────────────────────────────
+.content, #quarto-content > .page-columns {
+  max-width: 920px;
+}
+
+// ── Navbar ──────────────────────────────────────
+.navbar {
+  letter-spacing: 0.01em;
+  border-bottom: 2px solid transparent;
+  border-image: var(--gradient-accent) 1;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  color: white !important;
+  -webkit-text-fill-color: white;
+}
+
+// ── Footer ──────────────────────────────────────
+.nav-footer {
+  border-top: 2px solid transparent;
+  border-image: var(--gradient-accent) 1;
+}
+
+// ── Index page section headings ─────────────────
+#quarto-content h2 {
+  border-bottom: none;
+  border-left: 4px solid var(--accent);
+  padding-left: 0.75em;
+  padding-bottom: 0;
+  margin-top: 1em;
+  background: var(--gradient-subtle);
+  border-radius: 0 8px 8px 0;
+  padding-top: 0.4em;
+  padding-bottom: 0.4em;
+}
+
+// Inside blog posts, keep the simpler h2 style
+article#quarto-document-content h2 {
+  border-left: none;
+  padding-left: 0;
+  background: none;
+  border-radius: 0;
+  padding-top: 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  padding-bottom: 0.35em;
+  margin-top: 2.8em;
+}
+
+// ── Grid listing cards ──────────────────────────
+.quarto-grid-item .card {
+  border-radius: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  box-shadow: 0 2px 12px var(--card-shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px var(--card-shadow-hover);
+    border-color: var(--accent);
+  }
+}
+
+.quarto-grid-item .card-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.quarto-grid-item .card-text {
+  opacity: 0.8;
+}
+
+// ── Category badges ─────────────────────────────
+.quarto-grid-item .badge,
+.quarto-listing-category .badge {
+  background: var(--badge-bg) !important;
+  color: var(--badge-color) !important;
+  border-radius: 20px;
+  padding: 0.3em 0.75em;
+  font-weight: 500;
+  font-size: 0.78em;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.18) !important;
+  }
+}
+
+// ── Links ───────────────────────────────────────
+a {
+  transition: color 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    color: var(--accent-secondary) !important;
+  }
+}
+
+// ── Math rendering ──────────────────────────────
+.math.display {
+  margin: 1.8em 0;
+  overflow-x: auto;
+  padding: 0.5em 0;
+}
+
+.math.inline {
+  padding: 0 0.1em;
+}
+
+// ── Callout boxes ───────────────────────────────
+.callout {
+  border-radius: 10px;
+  border-left-width: 4px;
+  margin: 1.8em 0;
+  padding: 0.2em 0;
+}
+
+.callout-tip {
+  border-left-color: var(--accent-tertiary) !important;
+}
+
+.callout-note {
+  border-left-color: var(--accent-secondary) !important;
+}
+
+// ── Code blocks ─────────────────────────────────
+div.sourceCode {
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.12);
+  border-left: 3px solid var(--accent);
+  margin: 1.5em 0;
+}
+
+pre > code {
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+// ── Video containers ────────────────────────────
+video {
+  border-radius: 10px;
+  margin: 1.8em 0;
+  display: block;
+  width: 100%;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+// ── Plotly figures ──────────────────────────────
+.plotly-graph-div {
+  margin: 1.5em 0;
+  border-radius: 10px;
+}
+
+// ── Series navigation ───────────────────────────
+.series-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5em 0;
+  margin-top: 3em;
+  border-top: 2px solid transparent;
+  border-image: var(--gradient-accent) 1;
+  font-weight: 600;
+}
+
+.series-nav a {
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
+
+// ── Blockquotes ─────────────────────────────────
+blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 0.4em 1.5em;
+  margin: 1.5em 0;
+  font-style: italic;
+}
+
+// ── Title banner ────────────────────────────────
+.quarto-title-banner {
+  padding: 2.5em 0;
+}
+
+.quarto-title .title {
+  font-size: 2.4rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.quarto-title .subtitle {
+  font-size: 1.15rem;
+  opacity: 0.75;
+  margin-top: 0.5em;
+}
+
+// ── Smooth scrolling ────────────────────────────
+html {
+  scroll-behavior: smooth;
+}
+
+// ── Reading experience ──────────────────────────
+article p {
+  text-align: left;
+  hyphens: none;
+}
+
+// ── Figure captions ─────────────────────────────
+.figure-caption, figcaption {
+  font-size: 0.88em;
+  opacity: 0.7;
+  margin-top: 0.5em;
+  font-style: italic;
+}
