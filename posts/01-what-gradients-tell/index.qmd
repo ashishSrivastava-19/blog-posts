@@ -1,0 +1,312 @@
+---
+title: "What Gradients Actually Tell a Model"
+subtitle: "Learning is just organized falling"
+author: "Ashish Srivastava"
+date: "2026-05-01"
+categories: [gradients, optimization, foundations]
+draft: false
+bibliography: ../../references.bib
+format:
+  html:
+    code-fold: true
+jupyter: python3
+---
+
+::: {.callout-note}
+This is **Part 1** of a 6-part series on *From Gradients to Correlated Noise*.
+[View the series home →](../../index.qmd)
+:::
+
+## A Gradient That Remembered a Face
+
+In 2019, a team at MIT showed something that, when we first read about it, genuinely unsettled us.
+
+They took a gradient — that vector of numbers you compute from a single training image, the same one you use to nudge your model's weights — and from it alone, they reconstructed the original image. Pixel by pixel. Faces, handwritten digits, medical scans. All recovered from what we'd always treated as disposable optimization plumbing [@zhu2019deep].
+
+That gradient was never "just a direction to step in." It was a high-fidelity encoding of the data that produced it.
+
+Understanding *why* turns out to be the key to some of the biggest open problems in modern ML: memorization, data leakage, and the entire field of differential privacy. But we'll get there. First, we want to set up the mental picture we'll carry through this entire series.
+
+It starts with a ball on a mountain.
+
+## A Ball on a Mountain You Can't See
+
+Here's the gradient descent update rule:
+
+$$\theta_{t+1} = \theta_t - \eta \, \nabla_\theta \mathcal{L}(\theta_t)$$
+
+Four symbols. But forget them for a moment. Picture this instead:
+
+**You're a ball sitting on a mountain in pitch darkness.** You can't see the landscape. All you can feel is the slope right beneath you — which way is downhill, *right here, right now*.
+
+So you roll. One small step downhill at a time, trusting the ground under your feet.
+
+That's it. That's gradient descent. Everything else is just details about how steep the slope is, how far you roll, and what the mountain looks like in the dark.
+
+Now let's map the symbols onto this picture:
+
+- $\theta_t$ — **where you are.** Your position on the mountain. In reality, this is a point in a space with millions of dimensions — but the intuition is exactly the same.
+- $\nabla_\theta \mathcal{L}(\theta_t)$ — **the slope under your feet.** And here's the part most people miss: this slope is computed *from the training data*. Different data shapes a different mountain. Same position, different data, completely different slope. The data doesn't just live somewhere else — it *is* the terrain.
+- $\eta$ — **how far you roll.** The learning rate. Roll too far and you overshoot every valley. Too cautious and you barely move.
+- The minus sign — **downhill, not up.** The gradient points uphill (toward higher loss). You want to go down. So you negate it.
+
+New position = old position − step size × slope.
+
+That's all there is. Every optimizer you've ever used — SGD, Adam, AdaGrad, RMSProp — is a variation on this. They just differ in how they filter and scale the slope before you roll. The slope itself always comes from the same place: the gradient.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/UpdateRuleDissected.mp4" type="video/mp4">
+</video>
+
+## The Slope Is a Tug of War
+
+Most explanations stop there. Ball rolls downhill, loss decreases, the end. But they skip the most important question: **where does the slope actually come from?**
+
+When you compute a gradient over a mini-batch, you're not getting one clean signal. The slope you feel under you is the result of a tug of war.
+
+$$\nabla_\theta \mathcal{L} = \frac{1}{|B|} \sum_{i \in B} \nabla_\theta \ell(z_i, \theta)$$
+
+Each training example $z_i$ in the batch exerts its own force on the ball — its own opinion about which way you should roll. The gradient you feel is just the average of all those forces pulling on you at once.
+
+And here's the thing: **those forces disagree.**
+
+A cat image the model already classifies correctly? Gentle nudge — *I'm fine, leave me alone.* A blurry image the model gets totally wrong? Hard yank — *you need to move, NOW.* A rare, unusual example — say, a photo of a cat wearing a hat? It pulls in a completely different direction from everyone else.
+
+The batch gradient averages all of this out. It's the net force. But every individual pull is still in there, superimposed on top of each other. Each one carries a trace of the specific data point that produced it.
+
+This is why that MIT team could reconstruct faces from gradients. The slope doesn't just say "roll this way." It says "roll this way *because of these specific images.*" The *because-of* is baked into every component.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/GradientForces.mp4" type="video/mp4">
+</video>
+
+::: {.callout-tip}
+## The Key Insight
+Think of it like superposition in physics. The electric field at a point is the sum of contributions from every charge. The gradient at a parameter is the sum of contributions from every data point. Remove one charge, the field shifts. Remove one data point, the gradient shifts. It's not a metaphor — it's the same math.
+:::
+
+## When You Can Only Feel a Patch
+
+So if the full gradient over all your data gives the most accurate slope reading, why would you ever settle for a noisy estimate from just 64 examples?
+
+Because feeling the entire mountain at once isn't as helpful as you'd think.
+
+Imagine you could sense the true slope — the average force from every single training example, all at once. You'd roll smoothly in the consensus direction. You'd glide into the nearest valley and stop. Clean. Efficient. Done.
+
+But what if that nearest valley is a narrow groove? It fits the training data perfectly, but the moment the ground shifts even slightly — new data, a small change in distribution — you tumble out. Narrow grooves don't generalize.
+
+Now picture this instead: at each step, you can only feel a small random patch of the mountain — just one mini-batch. Your reading of the slope is noisy. It wobbles step to step because different patches pull you in slightly different directions. You don't roll in a smooth line — you zigzag, overshoot, bounce around.
+
+And that bouncing? **That's the whole point.**
+
+```{python}
+#| label: fig-sgd-vs-fullbatch
+#| fig-cap: "SGD (batch size 32) takes a noisy, winding path. Full-batch gradient descent follows a smooth curve. Both reach a basin — but SGD's noise helps it escape sharp grooves that full-batch gets stuck in."
+
+import plotly.graph_objects as go
+import numpy as np
+
+np.random.seed(42)
+
+def loss_fn(x, y):
+    sharp = 3.0 * np.exp(-3 * ((x + 1)**2 + (y + 1)**2))
+    broad = 2.0 * np.exp(-0.5 * ((x - 1.5)**2 + (y - 1)**2))
+    bowl = 0.05 * (x**2 + y**2)
+    return -sharp - broad + bowl + 4
+
+def grad_fn(x, y):
+    h = 1e-5
+    dx = (loss_fn(x + h, y) - loss_fn(x - h, y)) / (2 * h)
+    dy = (loss_fn(x, y + h) - loss_fn(x, y - h)) / (2 * h)
+    return dx, dy
+
+# Full-batch trajectory (smooth)
+x_fb, y_fb = 2.5, 2.5
+fb_path_x, fb_path_y = [x_fb], [y_fb]
+lr = 0.15
+for _ in range(80):
+    dx, dy = grad_fn(x_fb, y_fb)
+    x_fb -= lr * dx
+    y_fb -= lr * dy
+    fb_path_x.append(x_fb)
+    fb_path_y.append(y_fb)
+
+# SGD trajectory (noisy)
+x_sgd, y_sgd = 2.5, 2.5
+sgd_path_x, sgd_path_y = [x_sgd], [y_sgd]
+for _ in range(80):
+    dx, dy = grad_fn(x_sgd, y_sgd)
+    noise_scale = 0.4
+    dx += np.random.normal(0, noise_scale * (1 + abs(dx)))
+    dy += np.random.normal(0, noise_scale * (1 + abs(dy)))
+    x_sgd -= lr * dx
+    y_sgd -= lr * dy
+    sgd_path_x.append(x_sgd)
+    sgd_path_y.append(y_sgd)
+
+xi = np.linspace(-3, 4, 200)
+yi = np.linspace(-3, 4, 200)
+X, Y = np.meshgrid(xi, yi)
+Z = loss_fn(X, Y)
+
+fig = go.Figure()
+
+fig.add_trace(go.Contour(
+    x=xi, y=yi, z=Z,
+    colorscale='Viridis',
+    showscale=False,
+    contours=dict(showlabels=False),
+    opacity=0.6,
+    name='Loss Surface'
+))
+
+fig.add_trace(go.Scatter(
+    x=fb_path_x, y=fb_path_y,
+    mode='lines+markers',
+    marker=dict(size=3, color='#FF6B6B'),
+    line=dict(color='#FF6B6B', width=2.5),
+    name='Full-Batch GD'
+))
+
+fig.add_trace(go.Scatter(
+    x=sgd_path_x, y=sgd_path_y,
+    mode='lines+markers',
+    marker=dict(size=3, color='#4ECDC4'),
+    line=dict(color='#4ECDC4', width=2.5),
+    name='SGD (batch=32)'
+))
+
+fig.add_trace(go.Scatter(
+    x=[2.5], y=[2.5],
+    mode='markers+text',
+    marker=dict(size=12, color='white', line=dict(width=2, color='black')),
+    text=['Start'], textposition='top center',
+    showlegend=False
+))
+
+fig.update_layout(
+    xaxis_title='θ₁',
+    yaxis_title='θ₂',
+    template='plotly_white',
+    width=750, height=550,
+    legend=dict(x=0.02, y=0.98, bgcolor='rgba(255,255,255,0.8)'),
+    margin=dict(l=60, r=30, t=30, b=60)
+)
+
+fig.show()
+```
+
+The noisy path looks worse. But look where each trajectory ends up. Full-batch gradient descent slides into the nearest valley and stays — even if it's a narrow groove. SGD bounces around enough to escape the narrow grooves and settle into broader basins. Broader basins generalize better because small perturbations don't blow up the loss.
+
+The noise isn't a tax you pay for computational savings. It's a free regularizer. The ball doesn't find better valleys *despite* the bouncing — it finds them *because of* the bouncing.
+
+::: {.callout-note}
+## The noise isn't random jitter
+SGD noise is **anisotropic** — it's larger along directions where the landscape curves sharply, and smaller where it's flat. The ball preferentially bounces *out of* narrow grooves while settling into broad ones. It's structured exploration, not random stumbling.
+:::
+
+## The Mountain Is Stranger Than You Think
+
+We've been drawing this as a gentle terrain with some valleys. The 2D contour plot above reinforces that picture.
+
+It's a useful lie.
+
+Your model has millions of parameters. Its loss landscape is a surface in a million-dimensional space. We can only show you 2D slices, and different slices of the same landscape look completely different — smooth valley in one view, jagged ravine in another [@li2018visualizing].
+
+Here's what we actually know about the real terrain:
+
+**Most flat spots aren't valleys — they're saddle points.** In $d$ dimensions, a critical point (where the slope hits zero) is a true minimum only if *all* $d$ eigenvalues of the Hessian are positive. The odds? Roughly $2^{-d}$. For a million parameters, that's zero for all practical purposes. Almost every flat spot the ball encounters is a saddle — downhill in some directions, uphill in others. There's almost always a way out [@dauphin2014identifying].
+
+**The landscape is mostly plateau.** Most of the gradient's energy concentrates in a handful of directions (the top Hessian eigenvalues). In the vast majority of directions, the terrain is nearly flat. The ball sits on an enormous plateau with a few narrow channels carved into it.
+
+**The ground shifts under you.** With SGD, each mini-batch defines a slightly different loss function — a slightly different mountain. You're not rolling down one fixed surface. You're rolling down an ensemble of surfaces that keep swapping out beneath you. The places where all their valleys overlap? That's where generalization lives.
+
+```{python}
+#| label: fig-loss-landscape-3d
+#| fig-cap: "A loss landscape with multiple basins, saddle points, and ridges. Drag to rotate and explore. Even this is a drastic simplification — real landscapes have millions of dimensions and no single 'correct' view."
+
+import plotly.graph_objects as go
+import numpy as np
+
+x = np.linspace(-3, 3, 250)
+y = np.linspace(-3, 3, 250)
+X, Y = np.meshgrid(x, y)
+
+# Multiple basins of different depths and widths, saddle regions, texture
+Z = (0.15 * (X**2 + Y**2)
+     - 2.5 * np.exp(-((X - 1.2)**2 + (Y - 1.0)**2) / 0.4)
+     - 1.8 * np.exp(-((X + 1.5)**2 + (Y + 0.5)**2) / 1.5)
+     - 1.2 * np.exp(-((X - 0.3)**2 + (Y + 1.8)**2) / 0.6)
+     + 0.8 * np.exp(-((X + 0.2)**2 + (Y - 0.2)**2) / 0.3)
+     + 0.25 * np.sin(2.5 * X) * np.cos(2.5 * Y)
+     + 3.5)
+
+fig = go.Figure(data=[go.Surface(
+    x=x, y=y, z=Z,
+    colorscale='Viridis',
+    showscale=False,
+    contours_z=dict(
+        show=True, usecolormap=True,
+        highlightcolor='limegreen',
+        project_z=True
+    ),
+    lighting=dict(ambient=0.5, diffuse=0.7, specular=0.3, roughness=0.5),
+)])
+
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(title='θ₁', showbackground=False, gridcolor='rgba(128,128,128,0.2)'),
+        yaxis=dict(title='θ₂', showbackground=False, gridcolor='rgba(128,128,128,0.2)'),
+        zaxis=dict(title='Loss', showbackground=False, gridcolor='rgba(128,128,128,0.2)'),
+        camera=dict(eye=dict(x=1.8, y=1.8, z=1.2)),
+        bgcolor='rgba(0,0,0,0)',
+    ),
+    width=750, height=600,
+    margin=dict(l=0, r=0, t=30, b=0),
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+)
+
+fig.show()
+```
+
+So forget the picture of a ball on a gentle hill. The real picture is more like this: a ball navigating a million-dimensional fog, where the ground keeps shifting under your feet, most "traps" turn out to be doorways to other rooms, and the imprecise feel of the slope beneath you is exactly why you find the exit.
+
+## The Slope Remembers the Data
+
+Let's bring this back to where we started — that face, reconstructed from a gradient.
+
+Now you can see what a gradient actually is: the net result of every training example's individual pull on the ball, computed over a specific batch, pointing downhill on a landscape shaped by *that exact data*.
+
+Every part of that sentence matters for understanding why gradients leak:
+
+- **Individual pulls** — each data point's force is in there, superimposed in the net result.
+- **That exact data** — the gradient depends on precisely which examples were in the batch.
+- **Shaped by that data** — the gradient doesn't just say "the model is wrong." It encodes *how* it was wrong, *on what*, and *what would fix it*.
+
+The gradient is a communication channel from data to model. Each training step sends a message over this channel. The mini-batch is the encoder. The update rule is the decoder. And the channel has shockingly high bandwidth — enough to reconstruct individual faces.
+
+This reframing changes everything:
+
+- **The quality of learning** depends on the signal-to-noise ratio of this channel.
+- **The risk to privacy** depends on how much the channel reveals about individual data points.
+- **Differential privacy** (which we'll build up to in Posts 4-6) is the art of deliberately degrading this channel — adding enough noise that individual data points can no longer be recovered.
+
+But before we talk about defenses, we want to understand the threat more precisely. The batch gradient blends information from all the data at once. What can a *single* data point's contribution tell you?
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/GradientFingerprint.mp4" type="video/mp4">
+</video>
+
+That animation showed something subtle: removing a single data point from the batch visibly shifts the gradient's direction. The angular change is a fingerprint — a measure of how much influence that one example has on the ball's next move.
+
+In the next post, we'll decompose the gradient into individual contributions, measure each one's influence, and show that some data points don't just contribute — they *dominate*. The slope is a tug of war, and some forces pull far harder than others.
+
+::: {.series-nav}
+[← Series Home](../../index.qmd){.prev}
+:::
+
+## References
+
+::: {#refs}
+:::

@@ -1,0 +1,20 @@
+---
+title: "Blog"
+listing:
+  - id: dp-series
+    contents: "posts/*/index.qmd"
+    sort: "date asc"
+    type: grid
+    grid-columns: 2
+    categories: true
+    fields: [title, subtitle, date, categories, reading-time]
+page-layout: full
+title-block-banner: false
+---
+
+## Differential Privacy
+
+A series building intuition from gradients through memorization to cutting-edge privacy mechanisms.
+
+::: {#dp-series}
+:::
