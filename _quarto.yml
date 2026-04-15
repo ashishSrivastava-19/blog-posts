@@ -7,8 +7,8 @@ project:
 website:
   title: "Blog"
   description: "Ashish Srivastava's blog"
-  site-url: https://grim-hitman0XX.github.io/blog-posts/
-  repo-url: https://github.com/grim-hitman0XX/blog-posts
+  site-url: https://ashishSrivastava-19.github.io/blog-posts/
+  repo-url: https://github.com/ashishSrivastava-19/blog-posts
   navbar:
     left:
       - href: index.qmd
