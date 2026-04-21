@@ -26,6 +26,16 @@ SCENES = {
         "file": "post_02/scenes.py",
         "scenes": ["PerSampleVotes", "CurvatureAmplifier", "FingerprintDetector"],
     },
+    "post_03": {
+        "file": "post_03/scenes.py",
+        "scenes": [
+            "SecretSharerCanary",
+            "CanaryDoseResponse",
+            "RandomLabelsFitAnyway",
+            "MembershipInferenceLoupe",
+            "LibraryCardCatalog",
+        ],
+    },
 }
 
 

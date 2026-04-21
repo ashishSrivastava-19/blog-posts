@@ -2,7 +2,7 @@
 title: "When Models Remember Too Much"
 subtitle: "What if your model passed the exam by memorizing the answer key?"
 author: "Ashish Srivastava"
-date: "2026-04-18"
+date: "2026-04-21"
 categories: [memorization, privacy, generalization]
 draft: false
 bibliography: ../../references.bib
@@ -12,4 +12,219 @@ format:
 jupyter: python3
 ---
 
-*Cooking something up...*
+::: {.callout-note}
+This is **Part 3** of a 6-part series on *From Gradients to Correlated Noise*.
+[← Post 2: How One Data Point Steers the Entire Model](../02-per-sample-gradients/index.qmd) · [View the series home →](../../index.qmd)
+:::
+
+## A Model That Knew Where Someone Lived
+
+In 2021, a team of researchers sat down with GPT-2, OpenAI's then-flagship language model, and asked it to complete a short, innocent-looking prefix. Not a jailbreak. Not a clever adversarial prompt. They just asked.
+
+The model responded with a real person's full name, physical address, email, and phone number. Verbatim. The contact details were correct. The person existed. None of it was secret. It had appeared, *once*, on a public webpage that happened to be in GPT-2's training corpus.
+
+The team sampled roughly 600,000 candidate continuations, ranked them with six simple heuristics, and manually inspected the top 1,800. **604 of those 1,800 were verbatim strings from the training data** [@carlini2021extracting]. The extracted material included names, phone numbers, email addresses, UUIDs, 128-bit cryptographic keys, and paragraphs of copyrighted text. The model had not been told these strings were private. It didn't know what "private" meant. It had simply been trained to predict the next token, and some of those tokens, it turned out, were the tokens of a specific person's life.
+
+This is the fact we want you to sit with for a moment, because the rest of this post is about trying to explain it: **a neural network with no concept of privacy can still remember and repeat the data it was trained on**.
+
+First, the simplest version of the problem.
+
+## One Sentence, Seen Once, Remembered Forever
+
+In 2019, before the GPT-2 extraction paper, Carlini and colleagues ran a cleaner experiment [@carlini2019secret]. They took a standard character-level language model, trained on the Penn Treebank corpus. Into that corpus they inserted, exactly one time, a single synthetic sentence of the form:
+
+> *My social security number is 281-26-5017.*
+
+They trained the model. Nothing unusual happened. Validation loss dropped, the model learned English, everything looked normal. Then they asked a small question: if you prompt the trained model with `"My social security number is"` and beam-search its completions, how high does our inserted string rank compared to every other same-format string of nine digits?
+
+They defined a metric for this, called **exposure**:
+
+$$\mathrm{exposure}_\theta(s) \;=\; \log_2 |\mathcal{R}| \;-\; \log_2 \mathrm{rank}_\theta(s)$$
+
+where $\mathcal{R}$ is the set of all possible fill-ins (here, $10^9$ nine-digit strings) and $\mathrm{rank}_\theta(s)$ is where the canary sits when you sort all of $\mathcal{R}$ by model log-probability. A completely unmemorized canary has exposure near zero (it looks like any other random string). A perfectly memorized canary has exposure $\log_2 |\mathcal{R}| \approx 30$ bits, meaning it is the single most likely string in its format.
+
+After training on the corpus with the canary inserted *once*, its exposure was already visibly above baseline. After a handful of insertions, the canary became extractable by brute-force search, and the model would emit the exact nine digits it had seen, on command.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/SecretSharerCanary.mp4" type="video/mp4">
+</video>
+
+The paper called this phenomenon *unintended memorization*, and its title was *The Secret Sharer*. The model is not malicious. It is doing its job. It is also, quietly, sharing.
+
+You might object: surely this depends on how many times the canary appeared? Maybe once is a fluke. The same paper sweeps that variable. Exposure rises continuously with insertion count, but (and this is the important part), **the floor is not zero**. Even a single canary leaves a trace the model never quite erases.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/CanaryDoseResponse.mp4" type="video/mp4">
+</video>
+
+There is no "too rare to matter" threshold. Every training example is, in principle, a canary.
+
+## Capacity Is Cheap
+
+So how is this possible? Why does a model that works beautifully on unseen data also retain, with near perfect accuracy, a sentence it saw once three weeks ago?
+
+The answer has been hiding in plain sight since 2017. A paper by Zhang, Bengio, Hardt, Recht, and Vinyals, the kind of paper that shifts the ground under a whole field, made a very simple move [@zhang2017understanding]. They took standard deep image classifiers, Inception and AlexNet, and asked: how well does the same architecture, with the same optimizer, fit CIFAR-10 when you replace every label with a uniformly random one?
+
+The expected answer, if you believed classical learning theory, was *poorly*. Random labels carry no signal. A model limited by its effective capacity should plateau at chance. Dropout and weight decay should prevent the model from bending its decision boundary into a million specific shapes for a million specific images.
+
+The measured answer was that the network, with zero regularization tricks needed, reached **100% training accuracy** on pure random labels. Test accuracy collapsed to chance (10% on CIFAR-10), but on the training set, the network fit arbitrary label assignments exactly. It did the same on ImageNet. Replace labels with Gaussian noise, shuffle the pixels, swap the images for random pixels entirely. The network still found a way to memorize the assignment.
+
+Convergence slowed as the labels got more random, but it happened. Every time.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/RandomLabelsFitAnyway.mp4" type="video/mp4">
+</video>
+
+The theoretical content of the paper is a short construction: a two-layer ReLU network with only $2n + d$ parameters can exactly fit any labeling of $n$ points in $\mathbb{R}^d$. That bound is absurdly loose for modern networks, which have hundreds of millions of parameters and are trained on millions of points. *Effective capacity, at the scales we train at, is unlimited.*
+
+The consequence for privacy is immediate. If a network's capacity is vast enough to memorize an arbitrary, information-free assignment of labels to CIFAR images, then there is no *capacity-based reason* it wouldn't memorize a specific sentence of a specific person's training text. Memorization is not something the network is straining to avoid. It is the most natural thing a modern network does.
+
+::: {.callout-tip}
+## Memorization ≠ overfitting
+Overfitting is when the train-test gap is large. Memorization can happen when the train-test gap is *zero*. A network can generalize beautifully on the distribution *and* have memorized specific training examples verbatim; the two axes are independent. Regularization narrows the train-test gap, and it barely moves the per-example memorization of tail examples. We will come back to this.
+:::
+
+## You Don't Need the Weights, Only the Confidence
+
+Capacity explains why the model *could* remember. It doesn't yet explain why an outside observer, with no access to weights or gradients, can extract what was remembered. For that we need the attack side of the ledger.
+
+In 2017, Shokri, Stronati, Song, and Shmatikov asked a small but sharpening question [@shokri2017membership]: given only black-box query access to a trained classifier (just the output confidence vector), can an adversary determine whether a specific record was in the training set?
+
+This framing is called **membership inference**. A successful attacker doesn't need to extract text or reconstruct images. They only need to answer, better than chance, *was this data point in your training set?*, and that alone constitutes a privacy violation, because the training set membership of a medical record, a voter registration, or a photo in a dating-app dataset is a private and sensitive entity.
+
+Their method has since been refined many times over, but the original version is enough for the intuition. Call the model we want to attack the **target**, and any look-alike we train on our own data a **shadow**. The attack proceeds like this:
+
+1. Train many "shadow" models on data drawn from the same distribution as the target's training data, where you control membership (so you have ground truth for who was and wasn't in each shadow's training set).
+2. On each shadow, collect the output confidence vector $\mathbf{y} = f(x)$ for both members and non-members. Label them.
+3. Train a small attack classifier that, given $\mathbf{y}$ and the class label, predicts "in" or "out."
+4. Now run that attack classifier on the *target's* outputs.
+
+Against real commercial APIs like Google Prediction and Amazon ML, with no access beyond queries, they reported attack precision around **0.94 on the Purchases-100 dataset** and around **0.95 on CIFAR-100**, well above the 0.5 baseline of random guessing. These weren't toy models. They were the models you could buy.
+
+The mechanism underlying the attack is intuitively quite simple. A model that has memorized example $x$ tends to assign $x$ very high confidence. The loss values a model gives to training data and to unseen data overlap in the middle, but separate at the low-loss tail. The attacker lives in that tail.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/MembershipInferenceLoupe.mp4" type="video/mp4">
+</video>
+
+So we now have the picture. A model with effectively unbounded capacity can and does memorize specific training examples. The memorized examples announce themselves through low loss. An attacker with no privileged access can separate members from non-members by looking for that low-loss signature. From there, extraction (in the Secret Sharer sense) is a matter of search.
+
+The natural response at this point is the one everyone has. *Fine. So just identify the memorized examples and remove them.* Retrain on the cleaned subset. Problem solved.
+
+This is where the story bends.
+
+## Why the Tail Must Be Memorized
+
+In 2020, Vitaly Feldman published a paper with a title that tells you most of the argument: *Does Learning Require Memorization? A Short Tale about a Long Tail* [@feldman2020does]. It is a theory paper; it proves a lower bound.
+
+To state the result we need a definition. Feldman formalizes the **memorization score** of an algorithm $A$ on training set $S$ at example $i$ as:
+
+$$\mathrm{mem}(A, S, i) \;=\; \Pr[A(S)(x_i) = y_i] \;-\; \Pr[A(S^{\setminus i})(x_i) = y_i]$$
+
+Simply said: *the probability the trained model gets $x_i$ right, minus the probability it would have gotten $x_i$ right if it had been trained on everything except $x_i$*. A score near 1 means the model only gets $x_i$ right because it saw $x_i$, which is pure memorization. A score near 0 means removing $x_i$ doesn't hurt, which is pure generalization. Note the structural resemblance to the influence functions of Post 2: the memorization score is *leave-one-out* influence, applied to the predictor's behavior on the point removed.
+
+Feldman studies data made of many sub-groups. Some sub-groups are common, and many more are rare. The rarest ones, called *singletons*, show up exactly once in any finite training sample.
+
+Theorem 2.3 from the paper says, informally: any algorithm that achieves generalization error close to the Bayes-optimal risk on such a distribution *must* have memorization score close to 1 on a constant fraction of its singletons. The reason is brutally simple. For a sub-population represented by a single training point, there is nothing else for the algorithm to generalize *from*. If the algorithm doesn't memorize that point, it has no hope of predicting its sub-population at test time.
+
+This is worth restating. **Memorization of the tail is not a failure of the algorithm. It is a consequence of the distribution.**
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/LibraryCardCatalog.mp4" type="video/mp4">
+</video>
+
+The library-card analogy in the animation above is the shortest way to feel this. Imagine a librarian writing index cards. For a popular genre like romance novels, one card can describe a thousand books: "boy meets girl, obstacles, happy ending, 280 pages, chapters averaging 3000 words." The card compresses the genre. But for a *singleton*, say a diary of which exactly one copy exists, the only card faithful to the book is a transcription of the book. There is no compression available. The cardinality of the sub-population is 1. The only accurate summary *is* the original.
+
+Feldman's theorem is the formal version of this observation. For a long-tailed data distribution, any learning algorithm close to optimal is forced to transcribe its tail.
+
+In a companion empirical paper the same year, Feldman and Zhang estimated this memorization score at scale, by training about 2,000 ResNet variants on random subsets of ImageNet and CIFAR-100 and averaging, and showed two things [@feldman2020neural]. First, the memorization score distribution over training examples is bimodal: a huge mass near zero (the head) and a thin tail of examples with score near 1 (the tail). Second, they ran the surgical experiment: remove the highest-mem examples from the training set, retrain, and measure test accuracy *specifically* on visually similar rare test examples. Test accuracy on those rare examples degraded substantially. The memorized examples were not junk. They were the only way the model had to serve the rare.
+
+```{python}
+#| label: fig-longtail
+#| fig-cap: "A stylized long-tail distribution with memorization scores overlaid. Common sub-populations (left) have near-zero memorization score, so the model learns them by pattern. The tail (right) consists of singletons that can only be predicted by memorization. Feldman's theorem: any near-optimal algorithm must have memorization score near 1 on a constant fraction of the tail."
+
+import plotly.graph_objects as go
+import numpy as np
+
+np.random.seed(7)
+
+# Zipf-like frequency of sub-populations
+ranks = np.arange(1, 201)
+freqs = 1.0 / (ranks ** 0.9)
+freqs = freqs / freqs.sum() * 1000  # arbitrary count units
+
+# Memorization score: near 0 for common, rises on the tail, near 1 for singletons
+mem_score = 1 / (1 + np.exp(-0.06 * (ranks - 130)))
+
+fig = go.Figure()
+
+fig.add_trace(go.Bar(
+    x=ranks, y=freqs,
+    marker=dict(color='rgba(100,150,220,0.6)', line=dict(width=0)),
+    name='Training examples per sub-population',
+    yaxis='y',
+    hovertemplate='Sub-pop rank %{x}<br>%{y:.1f} examples<extra></extra>',
+))
+
+fig.add_trace(go.Scatter(
+    x=ranks, y=mem_score,
+    mode='lines',
+    line=dict(color='#f0b429', width=3),
+    name='Memorization score',
+    yaxis='y2',
+    hovertemplate='Sub-pop rank %{x}<br>mem = %{y:.2f}<extra></extra>',
+))
+
+fig.add_annotation(
+    x=30, y=45, text="head: learned by pattern",
+    showarrow=False, font=dict(size=13, color='rgba(100,150,220,1)'),
+)
+fig.add_annotation(
+    x=170, y=0.92, yref='y2', text="tail: must be memorized",
+    showarrow=False, font=dict(size=13, color='#f0b429'),
+)
+
+fig.update_layout(
+    xaxis=dict(title='sub-population rank (common → rare)'),
+    yaxis=dict(title='examples per sub-population', side='left'),
+    yaxis2=dict(title='memorization score', side='right', overlaying='y',
+                range=[0, 1.05], gridcolor='rgba(0,0,0,0)'),
+    template='plotly_white',
+    width=780, height=430,
+    legend=dict(x=0.35, y=1.12, orientation='h',
+                bgcolor='rgba(255,255,255,0.8)'),
+    margin=dict(l=60, r=60, t=50, b=60),
+)
+
+fig.show()
+```
+
+Put this next to what we already know about attacks. The attacker who runs membership inference is looking for examples with unusually low loss, the ones the model is most confident about. The examples with unusually low loss are, disproportionately, the ones the model has memorized. The ones the model has memorized are, disproportionately, the ones on the long tail. **The long tail is where the memorization lives, and the memorization is what makes the attack work.**
+
+## No Post-Hoc Fix
+
+This is the uncomfortable geometry of the situation. Three facts, each defensible on its own:
+
+1. Networks have the capacity to memorize arbitrary training inputs [@zhang2017understanding].
+2. Memorized inputs leak through output confidences alone, no privileged access required [@shokri2017membership; @carlini2021extracting].
+3. Memorization of rare inputs is not something the algorithm chose. It is something the data distribution compelled. Without it, the model fails on the tail [@feldman2020does].
+
+Put these together and a consequence falls out that many practitioners find it hard to accept: **there is no training-time trick that separates the memorization the model needs from the memorization an attacker can exploit.** They are the same memorization. Regularization, dropout, and early stopping reduce the gross train-test gap, which is worth doing for other reasons, but the per-example memorization score on tail examples is largely unmoved [@feldman2020neural]. You cannot filter out the "bad" memorized examples without also filtering out the examples your model was using to serve its rare users. Those are the same examples.
+
+A quieter implication deserves to be said aloud. **Memorization is regressive.** It falls hardest on the rare: the outliers, the minorities, the people whose data is statistically atypical, because those are exactly the examples whose correct prediction *requires* memorization. The user with the most common profile is the safest; the user with the least statistical cover is the most exposed. And removing their data to protect them removes them from the model entirely.
+
+If you want to control this channel, the channel through which specific training examples reach the model's weights and through which they can be pulled back out, you cannot do it by filtering the data or changing the optimizer. You have to do it by adding noise. Carefully calibrated, mathematically justified, provably private noise.
+
+That is the subject of the next three posts. In Post 4 we will define what "provably private" means, make it precise, and see why, without it, every defense people have tried is a patch on a leak the data itself is forcing open. In Post 5 we will build the basic noise mechanisms (Laplace, Gaussian, DP-SGD) that deliver that guarantee. In Post 6, the payoff: the frontier of correlated-noise mechanisms that achieve the same guarantee at a fraction of the utility cost.
+
+For now, the takeaway from this post is a single sentence. Memorization is the mechanism by which neural networks learn the long tail. It is also the mechanism by which they leak training data. Those are not two different phenomena with a clever intervention between them. They are the same phenomenon, seen from two sides. Either you control the channel through which data reaches the weights, or you don't.
+
+::: {.series-nav}
+[← Post 2](../02-per-sample-gradients/index.qmd){.prev}
+[Post 4 →](../04-differential-privacy/index.qmd){.next}
+:::
+
+## References
+
+::: {#refs}
+:::
