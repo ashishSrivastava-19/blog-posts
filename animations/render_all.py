@@ -36,6 +36,15 @@ SCENES = {
             "LibraryCardCatalog",
         ],
     },
+    "post_04": {
+        "file": "post_04/scenes.py",
+        "scenes": [
+            "SweenyJoinAttack",
+            "RandomizedResponseCoinGrid",
+            "DefinitionAsGame",
+            "PrivacyBudgetLedger",
+        ],
+    },
 }
 
 

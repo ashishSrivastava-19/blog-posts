@@ -2,8 +2,13 @@
 title: "When Models Remember Too Much"
 subtitle: "What if your model passed the exam by memorizing the answer key?"
 author: "Ashish Srivastava"
-date: "2026-04-21"
+<<<<<<< Updated upstream
+date: "2026-04-18"
 categories: [memorization, privacy, generalization]
+=======
+date: "2026-04-21"
+categories: [memorization, privacy, foundations]
+>>>>>>> Stashed changes
 draft: false
 bibliography: ../../references.bib
 format:
@@ -12,6 +17,9 @@ format:
 jupyter: python3
 ---
 
+<<<<<<< Updated upstream
+*Cooking something up...*
+=======
 ::: {.callout-note}
 This is **Part 3** of a 6-part series on *From Gradients to Correlated Noise*.
 [← Post 2: How One Data Point Steers the Entire Model](../02-per-sample-gradients/index.qmd) · [View the series home →](../../index.qmd)
@@ -76,6 +84,8 @@ Convergence slowed as the labels got more random, but it happened. Every time.
 </video>
 
 The theoretical content of the paper is a short construction: a two-layer ReLU network with only $2n + d$ parameters can exactly fit any labeling of $n$ points in $\mathbb{R}^d$. That bound is absurdly loose for modern networks, which have hundreds of millions of parameters and are trained on millions of points. *Effective capacity, at the scales we train at, is unlimited.*
+
+
 
 The consequence for privacy is immediate. If a network's capacity is vast enough to memorize an arbitrary, information-free assignment of labels to CIFAR images, then there is no *capacity-based reason* it wouldn't memorize a specific sentence of a specific person's training text. Memorization is not something the network is straining to avoid. It is the most natural thing a modern network does.
 
@@ -228,3 +238,4 @@ For now, the takeaway from this post is a single sentence. Memorization is the m
 
 ::: {#refs}
 :::
+>>>>>>> Stashed changes

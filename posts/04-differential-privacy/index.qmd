@@ -1,10 +1,207 @@
 ---
 title: "Differential Privacy: The Math of Plausible Deniability"
-subtitle: "Coming soon..."
+subtitle: "What 'anonymized' was supposed to mean — and finally does."
 author: "Ashish Srivastava"
-date: "2026-04-27"
+date: "2026-05-09"
 categories: [differential-privacy, foundations, privacy]
 draft: false
+bibliography: ../../references.bib
+format:
+  html:
+    code-fold: true
+jupyter: python3
 ---
 
-*Coming soon...*
+::: {.callout-note}
+This is **Part 4** of a 6-part series on *From Gradients to Correlated Noise*.
+[← Post 3: When Models Remember Too Much](../03-when-models-remember/index.qmd) · [View the series home →](../../index.qmd)
+:::
+
+## A Game You Are Already Playing
+
+Imagine a game with two players. The **curator** holds a database. The **adversary** wants to know whether one specific person — say, you — is a row in it. The curator cannot simply refuse to publish; they have a job to do. So they commit, in advance, to a *mechanism*: a randomized procedure that takes a database in and gives an output out. They run it, send the output, and the adversary, looking only at that output, has to decide: was your row in there or not?
+
+You are already playing this game. Every time a hospital releases summary statistics, every time a tech company publishes an aggregate, every time a model is trained and deployed — that is the curator running their mechanism. The only question is whether they have given the adversary, who is reading the output along with you, any meaningful chance of winning.
+
+In 1997, the curator was the Massachusetts Group Insurance Commission, which released the medical records of every state employee for research purposes. Names, social security numbers, and addresses had been stripped out. What remained looked, on its face, anonymous. Latanya Sweeney, then a PhD student, sent away for the Cambridge voter roll, which cost twenty dollars and contained every voter's name along with their ZIP code, date of birth, and sex [@sweeney2002kanon]. Three columns. The hospital records had those same three columns. She joined them. One row in the result, rendered uniquely identifiable by the three shared columns, belonged to **Governor William Weld**. Sweeney mailed his hospital records to his office.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/SweenyJoinAttack.mp4" type="video/mp4">
+</video>
+
+The kicker, which Sweeney published the same year, is that **(ZIP, DOB, sex) uniquely identifies roughly 87% of the United States population** [@sweeney2002kanon]. The hospital records were not "anonymized in a way that worked sometimes." They were, for almost everyone in them, not anonymized at all. The adversary needed twenty dollars and an afternoon.
+
+Sweeney's letter was the first formal demonstration; AOL 2006 [@barbaro2006aol] and the Netflix Prize 2008 [@narayanan2008robust] followed the same pattern with different data, and by the third disaster the lesson was clear: **every defense that names what the attacker is allowed to know loses the moment the attacker knows something else**.
+
+The previous post in this series ended with a related problem in a different costume. We saw that neural networks memorize specific training examples — that one canary inserted once into a corpus is still recoverable, that GPT-2 will recite a real phone number on prompt — and we argued that there is no training-time trick to separate the memorization the model needs from the memorization an attacker can exploit. The model is a curator, the gradient is its mechanism, and the trained weights are the output. The same game.
+
+This post is about the only known way the curator can win.
+
+## A Definition That Does Not Depend On What The Attacker Knows
+
+Stanley Warner, a Canadian sociologist, ran into a softer version of this problem in 1965 [@warner1965randomized]. He wanted to estimate the prevalence of an embarrassing trait in a population — the canonical example was tax cheating, but you can use any sensitive yes/no question — and he knew the same thing every survey designer knew: people do not answer such questions truthfully if their answer is on a clipboard. Warner's solution was an algorithm.
+
+Each respondent, in private, flips a coin. If it comes up heads, they answer truthfully. If it comes up tails, they flip a second coin, and answer "yes" if heads, "no" if tails. The interviewer never sees either coin. They only see the final answer.
+
+What does the interviewer learn? About any one individual: very little. If they hear "yes," there is a 50% chance the person flipped tails and the noise is doing the talking. The respondent has *plausible deniability* — they can always claim the coin made them say it. **This is the property the failed-anonymization framework cannot offer**: the answer is no longer a fingerprint, because the noise is structurally indistinguishable from the truth.
+
+What does the *aggregate* look like? Let $p$ be the true rate of yeses in the population. With probability $\tfrac{1}{2}$ a respondent reports their truth (which is "yes" with probability $p$), and with probability $\tfrac{1}{2}$ they report a fresh coin flip (which is "yes" with probability $\tfrac{1}{2}$). So the observed rate of yeses is
+
+$$\Pr[\text{report yes}] \;=\; \tfrac{1}{2}\,p \,+\, \tfrac{1}{2} \cdot \tfrac{1}{2} \;=\; \tfrac{p}{2} + \tfrac{1}{4}.$$
+
+Solve for $p$:
+
+$$\hat{p} \;=\; 2\,\Pr[\text{report yes}] \,-\, \tfrac{1}{2}.$$
+
+Three lines, and they say something specific. **No single answer tells the interviewer anything reliable about its respondent** — half the time the answer is the coin's, not the person's, and there is no way to tell which. But the *population rate* $p$ is still recoverable from the aggregate, exactly, by inverting the half-and-half mix the protocol baked in. **The individual has been anonymized; the statistic has not.**
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/RandomizedResponseCoinGrid.mp4" type="video/mp4">
+</video>
+
+Warner's protocol is the prototype of a **differentially private mechanism**. To see what makes it special, look at what stays true when you replace it with a different, harder mechanism: the relationship between the output distribution on a database that contains your row and the output distribution on a database without it is *bounded*. No matter what coin you flipped, the probability that an interviewer hears "yes" is the same up to a factor of two whether you cheated on your taxes or did not. Your row barely changes the distribution.
+
+This is the property that Cynthia Dwork, Frank McSherry, Kobbi Nissim, and Adam Smith named, in 2006, **differential privacy** [@dwork2006calibrating].
+
+::: {.callout-note}
+## ε-differential privacy
+A randomized mechanism $M$ is **$\varepsilon$-differentially private** if, for every pair of *neighboring* databases $D, D'$ (databases that differ in exactly one row), and every set $S$ of possible outputs,
+$$\Pr[M(D) \in S] \;\le\; e^{\varepsilon}\,\Pr[M(D') \in S].$$
+In words: swapping one person in or out of the database barely changes the output distribution. The factor $e^{\varepsilon}$ is the upper bound on how much it can change.
+:::
+
+The definition is doing several things at once. First, it is *worst-case* over neighboring databases: it does not require the curator to know which row is sensitive; the bound holds for *every* row simultaneously. Second, it is worst-case over outputs: not "on average the distributions are close" but "at every output value, the ratio is bounded." Third, it makes no assumptions about the adversary. The bound holds whatever they know; it does not need a threat model.
+
+There is one more thing it does, and this is the framing that survives best when the math gets harder: **$\varepsilon$ caps how confidently any adversary can guess which database the curator used.** Imagine the game we opened with — the adversary points to $D$ or $D'$ after seeing the output. Their best strategy is a *hypothesis test*: $H_0: \text{the database was } D$ versus $H_1: \text{the database was } D'$. For any test the adversary can run, $\varepsilon$-DP bounds the trade-off curve between the test's false-positive rate and its true-positive rate [@wasserman2010statistical; @kairouz2015composition]. There is no test, however clever, that beats the bound. The adversary has been capped.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/DefinitionAsGame.mp4" type="video/mp4">
+</video>
+
+This is the operational reading of $\varepsilon$ that no other tutorial in the public literature really delivers, and it is the one to keep. **$\varepsilon$ is the bound on attacker power.** Composition theorems are rules for how the bound extends across queries; post-processing is a rule for how it extends across transformations of the output; group privacy is a rule for how it extends across coalitions of rows. They are all the same statement, refracted.
+
+There is one technical wrinkle worth flagging now, because every real mechanism we will meet in Post 5 needs it. The strict definition above asks for the ratio bound to hold *always*. That is too much to ask of mechanisms that add Gaussian noise — there is always a tail event where the ratio blows up. So we relax:
+
+$$\Pr[M(D) \in S] \;\le\; e^{\varepsilon}\,\Pr[M(D') \in S] \;+\; \delta.$$
+
+This is **$(\varepsilon, \delta)$-differential privacy** [@dwork2006our]. The intuition is precise: with probability at least $1 - \delta$, the mechanism behaves $\varepsilon$-privately; with probability at most $\delta$, all bets are off. The $\delta$ is *not* a fudge factor. It is the probability of a catastrophic privacy failure — a tail event in which your row could in principle leak completely — and the standard advice is to keep $\delta$ "cryptographically small," well below $1/n$ where $n$ is the size of the database, so that the probability of a catastrophic event for *anyone* in the database is small. Pick $\delta = 10^{-3}$ on a database of a thousand people, and you are tacitly accepting that, in expectation, one row's privacy could fail.
+
+What does $\varepsilon$ feel like? The cleanest way to anchor it is Bayesian. Suppose the adversary's prior belief that you are in the database is $\pi$. After they see the output $o$, Bayes' rule gives the posterior:
+
+$$\Pr[\text{in} \mid o] \;=\; \frac{\Pr[o \mid \text{in}]\,\pi}{\Pr[o \mid \text{in}]\,\pi \,+\, \Pr[o \mid \text{out}]\,(1-\pi)}.$$
+
+The $\varepsilon$-DP definition pins the ratio of the two likelihoods between $e^{-\varepsilon}$ and $e^{\varepsilon}$. Plug each end into the formula and the posterior is squeezed:
+
+$$\frac{\pi}{\pi + (1-\pi)\,e^{\varepsilon}} \;\le\; \Pr[\text{in} \mid o] \;\le\; \frac{\pi\,e^{\varepsilon}}{\pi\,e^{\varepsilon} + (1-\pi)}.$$
+
+Plug in $\pi = 0.5$ (the adversary is uncertain) and three settings of $\varepsilon$:
+
+```{python}
+#| label: fig-posterior
+#| fig-cap: "How much can an ε-DP guarantee let an adversary's belief shift? Three values of ε; the prior is 50%. Tiny ε leaves the posterior almost unchanged. ε = 10 leaves no privacy at all — the adversary's posterior is essentially 1 if you're in, 0 if you're out. The 'right' ε is a *social* parameter, not a technical one; the field has not converged on a single answer."
+
+import numpy as np
+import plotly.graph_objects as go
+
+epsilons = np.array([0.1, 1.0, 10.0])
+prior = 0.5
+
+upper = (prior * np.exp(epsilons)) / (prior * np.exp(epsilons) + (1 - prior))
+lower = prior / (prior + (1 - prior) * np.exp(epsilons))
+
+fig = go.Figure()
+
+# Range bars: the posterior must lie between lower and upper
+fig.add_trace(go.Bar(
+    x=[f"ε = {e:g}" for e in epsilons],
+    y=upper - lower,
+    base=lower,
+    marker=dict(color='rgba(240,180,41,0.55)', line=dict(width=0)),
+    name='posterior range',
+    hovertemplate='ε=%{x}<br>posterior in [%{base:.3f}, %{y:.3f}+base]<extra></extra>',
+))
+
+# Reference line at the prior
+fig.add_hline(y=prior, line=dict(color='#888898', width=1, dash='dot'),
+              annotation_text="prior = 0.5", annotation_position="right")
+
+# Annotations with concrete numbers
+for x_idx, e in enumerate(epsilons):
+    fig.add_annotation(
+        x=x_idx, y=upper[x_idx], yshift=14,
+        text=f"≤ {upper[x_idx]:.3f}",
+        showarrow=False, font=dict(size=12, color='#f0b429'),
+    )
+    fig.add_annotation(
+        x=x_idx, y=lower[x_idx], yshift=-14,
+        text=f"≥ {lower[x_idx]:.3f}",
+        showarrow=False, font=dict(size=12, color='#f0b429'),
+    )
+
+fig.update_layout(
+    yaxis=dict(title='adversary posterior on "you ∈ database"',
+               range=[0, 1.05], gridcolor='rgba(0,0,0,0.08)'),
+    xaxis=dict(title=''),
+    template='plotly_white',
+    width=720, height=380,
+    showlegend=False,
+    margin=dict(l=70, r=40, t=40, b=60),
+)
+fig.show()
+```
+
+At $\varepsilon = 0.1$, the adversary's posterior is hemmed into the interval $[0.475, 0.525]$ — a swing of five percentage points off a 50% prior. At $\varepsilon = 1$, the interval is roughly $[0.27, 0.73]$ — substantial movement. At $\varepsilon = 10$, the interval is $[0.0000454, 0.99995]$, which is to say *no privacy at all*. The same number, three orders of magnitude apart, three radically different guarantees. Apple has reported per-query $\varepsilon$ values around 4 in some deployments. The 2020 US Census redistricting product used a global $\varepsilon \approx 19.6$ across all queries [@garfinkel2019understanding]. Academic DP-SGD papers commonly target $\varepsilon = 8$. There is no consensus. **$\varepsilon$ is a social parameter, not a technical one** — it is the comparison currency of a guarantee, not the guarantee itself.
+
+## Why The Old Defenses Failed The Same Test
+
+We have a definition. Now we can run the old anonymization defenses through it: did they satisfy $\varepsilon$-DP for any finite $\varepsilon$? The dominant pre-2006 framework for releasing tabular data was **k-anonymity**: ensure every record in the released table is indistinguishable from at least $k-1$ others on the *quasi-identifier* columns (the ZIP/DOB/sex-like attributes that, while not direct identifiers, can be used to triangulate). You generalize the columns — round ZIP to a coarser zone, bucket dates of birth into years — until every row sits in an equivalence class of size at least $k$. The mechanism is *deterministic*. Add or remove one row that has unusual quasi-identifiers and the equivalence classes restructure: an output that was possible before becomes impossible after, or vice versa. The ratio of probabilities is $\infty$, not $e^\varepsilon$ for any finite $\varepsilon$. The Sweeney join is the rule, not the exception.
+
+Then someone notices that everyone in a given equivalence class has the same `diagnosis`, and the attacker, knowing only that you are *in* that class, learns your diagnosis without needing to identify your row. The fix is **l-diversity**: require each class to contain at least $l$ "well-represented" sensitive values. Then someone notices that the sensitive values can be technically diverse but semantically clustered (all of them are different cancers), so the attacker still learns you have cancer. The fix is **t-closeness**, which constrains the *distribution* of sensitive values in each class to be within $t$ of the global distribution. Each fix is still a deterministic function of the input. Each fails the same test for the same reason.
+
+The deeper problem, which patches cannot reach, is that **every additional column the data has is another dimension in which records can be unique**. With fifty binary attributes there are $2^{50} \approx 10^{15}$ possible cells, vastly more than there are humans alive; almost everyone is the only person in their cell. Your shopping cart is a fingerprint. Your sequence of movie ratings is a fingerprint. Your taxi pickup-and-dropoff sequence is a fingerprint. A defense that asks "are there at least $k$ rows that look like you?" cannot survive the discovery of one more attribute the curator did not anonymize.
+
+Each of these defenses bounds an attacker we already imagined. The DP definition we have just stated bounds *any* attacker — whatever they know, however they query — and the old defenses fail it for any finite $\varepsilon$. That is the difference, and it is not a difference of degree.
+
+## Three Properties That Make It Engineerable
+
+Once you have the definition, the work is to figure out what you can build with it. Three properties, each a rule for how the game extends, do most of that work.
+
+**Composition.** What if the curator runs *two* differentially private mechanisms on the same database — say, an $\varepsilon_1$-DP one followed by an $\varepsilon_2$-DP one — and publishes both outputs? The combined release is $(\varepsilon_1 + \varepsilon_2)$-DP. The privacy budgets add. Five $\varepsilon = 1$ queries cost $\varepsilon = 5$ in total. This is *sequential composition*, and its mental model is a budget that drains [@dwork2014algorithmic].
+
+You will not be surprised to learn that the budget runs out faster than you would like, especially in machine learning, where you might run thousands of gradient steps and each step looks at the data. So the privacy community spent considerable effort tightening the analysis. The result, due to Dwork, Rothblum, and Vadhan in 2010 [@dwork2010boosting] and refined since, is **advanced composition**: if you allow a tiny $\delta$, you can stack $k$ mechanisms each $\varepsilon$-DP and get an overall guarantee of approximately $\sqrt{2k\,\ln(1/\delta)}\;\varepsilon$ instead of $k\varepsilon$. The savings are dramatic — quadratic in $k$ — and they are the first place $\delta$ pays for itself. Modern privacy accountants used in DP-SGD, like the moments accountant [@abadi2016deep] and Rényi DP [@mironov2017renyi], are tighter still; we will meet them in Post 5.
+
+<video autoplay loop muted playsinline style="width:100%; border-radius:8px; margin:1.5em 0;">
+  <source src="../../animations/media/videos/scenes/1080p60/PrivacyBudgetLedger.mp4" type="video/mp4">
+</video>
+
+**Post-processing.** If $M$ is $\varepsilon$-DP and $f$ is *any* function (deterministic or randomized) that takes the output of $M$ and produces something else, then $f \circ M$ is also $\varepsilon$-DP. Whatever you build downstream of a private output — visualizations, summary statistics, machine-learning models, dashboards — inherits the guarantee for free. The proof is a one-liner; the consequence is everything. It is why a deep learning model trained on differentially private gradients is itself differentially private, with the same $\varepsilon$, no matter what you do to the weights afterward.
+
+**Group privacy.** What if your row and your sister's row are both in the database, and the adversary is testing the two-row hypothesis "are they both in"? An $\varepsilon$-DP mechanism is automatically $k\varepsilon$-DP for groups of size $k$ — the bound degrades linearly in the size of the coalition. This is what protects you from your relatives in genomic privacy contexts, where one cousin's DNA upload tells you more than a little about everyone else in the family tree, and it is what the Post 6 mechanisms have to work hard not to break when batches of training examples share signal.
+
+These three properties are not three theorems. They are the same theorem in three costumes. Composition is the rule when the same data flows through multiple mechanisms. Post-processing is the rule when the output flows through multiple functions. Group privacy is the rule when multiple rows belong to the same logical entity. In each case the bound on attacker power is preserved or degrades in a way you can write down. That is what makes differential privacy *engineerable* in a way no anonymization patch ever was.
+
+## What This Game Does Not Capture, And Why That's Honest
+
+Three misconceptions are worth correcting before we leave.
+
+The first is that **a small $\varepsilon$ means you are safe in absolute terms**. It does not. $\varepsilon$ bounds *contribution* — how much your individual row could change the output distribution — and it does so relative to a neighboring database that does not contain you. It says nothing about whether the *aggregate facts the curator is publishing* reveal things about you. If the curator publishes "98% of state employees in the dataset have hypertension," that statistic was true with or without you. DP does not protect you from the *population* you are statistically representative of. It protects you from being singled out, not from being a member of a class.
+
+The second is that **DP protects against an attacker who already knows everything except whether you are in the database**. It does. That is its strict reading. But the Bayesian translation we did above shows the limits: if the adversary has a strong prior that you are in (say, $\pi = 0.99$), even a moderate $\varepsilon$ leaves their posterior near 1 [@dwork2014algorithmic]. DP bounds the *update*, not the destination. If the destination is already near certainty, the update does not save you. You were already known.
+
+The third is the one Post 3 hinted at and Post 6 will quantify. **Noise is uniform; harm is not.** A mechanism that adds the same magnitude of noise to every query treats common subpopulations and rare ones identically — but the signal-to-noise ratio is much worse for the rare ones. Differential privacy, deployed naïvely, is *regressive* in the same way memorization was: the people whose data is statistically atypical are the people most distorted by the noise. The 2020 US Census deployment generated litigation precisely on these grounds — demographers argued that DP noise systematically harms small minority population counts. The argument is real. We will return to it in Post 6, where correlated-noise mechanisms turn out to be a partial answer.
+
+The Census story is the one to close on, because it is the largest currently deployed application of differential privacy in the world and it makes a diagnostic point. The 2010 Census published, as it had since 1790, large tables of cross-tabulated counts about the US population. In 2018, the Census Bureau ran an internal experiment: they took their own published tables and tried to *reconstruct* the underlying microdata — every individual's record — using a linear program. They succeeded. Roughly **46% of the US population was correctly reconstructed**, with the right block, sex, age, race, and ethnicity, from public tables alone [@garfinkel2019understanding]. The Census Bureau, in other words, convinced itself that its own historical method was already leaking. They switched to a differentially private release for 2020.
+
+This is the proof that controlling the channel matters not because privacy researchers are paranoid but because every other approach has been measured, in production, and found leaking. Anonymization asks "can the attacker re-identify?" and loses every arms race. DP asks a harder question — "does the output depend on any one person?" — and answers with a number. The number is not magic. The number is a comparison currency, contested, sometimes too loose to mean what its users think it means. But the question is the right question, and it is the only question with a defensible answer.
+
+The gradient is the channel — that was Post 3's claim. Post 4 gave us the language to say what controlling that channel formally means: the post-channel output should look almost the same whether or not your data flowed through it, where "almost the same" is measured by the strongest test any adversary can run. We have a definition. We have composition rules so we can spend it across queries, post-processing immunity so we can build on top of it, group privacy so we know what coalitions cost. There is one thing left to do: build a mechanism that signs the contract — and watch the curator turn into your optimizer, the database into your training set, and the mechanism into the noise we splice into every gradient. **Post 5 is differential privacy for the ML setting: clip, noise, aggregate.**
+
+::: {.series-nav}
+[← Post 3](../03-when-models-remember/index.qmd){.prev}
+[Post 5 →](../05-mechanism-toolkit/index.qmd){.next}
+:::
+
+## References
+
+::: {#refs}
+:::
