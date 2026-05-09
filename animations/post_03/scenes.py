@@ -6,11 +6,11 @@ Scenes:
     probability inset at step 1 as proof of mechanism.
   - CanaryDoseResponse: Insertion count vs. recovery probability. The floor at
     dose = 1 is non-zero; even one exposure leaves a trace.
-  - RandomLabelsFitAnyway: Two networks side by side, real labels vs. random.
+  - RandomLabelsFitAnyway: Two networks side by side — real labels vs. random.
     Both train losses race to zero; test losses diverge. The gap is the point.
-  - MembershipInferenceLoupe: Two overlapping loss distributions. Zoom reveals
-    that the low-loss tail separates cleanly.
-  - LibraryCardCatalog: Two index cards, a popular-genre summary (compression)
+  - MembershipInferenceLoupe: Two overlapping loss distributions. Zoom into the
+    low-loss tail; the attack's decision boundary snaps in cleanly.
+  - LibraryCardCatalog: Two index cards — a popular-genre summary (compression)
     and a singleton diary (transcription). Feldman's theorem made concrete.
 
 House rule: all narrative text lives at the top or bottom edge, never centre.
@@ -72,7 +72,7 @@ class SecretSharerCanary(Scene):
         canary_idx = 3
         stage_centre = ORIGIN + DOWN * 0.3
 
-        b1 = _bottom("Training corpus, one line is a canary", color=DIM_WHITE)
+        b1 = _bottom("Training corpus — one line is a canary", color=DIM_WHITE)
         self.play(FadeIn(b1), run_time=0.4)
 
         for i, line in enumerate(corpus):
@@ -172,13 +172,13 @@ class SecretSharerCanary(Scene):
 # Scene 2 — CanaryDoseResponse
 # ══════════════════════════════════════════════════════════════════
 class CanaryDoseResponse(Scene):
-    """Insertion count -> recovery probability. The floor at dose = 1 is
+    """Insertion count → recovery probability. The floor at dose = 1 is
     visibly non-zero. Three beats: empty axes, curve draws, highlight x=1."""
 
     def construct(self):
         self.camera.background_color = BG_COLOR
 
-        header = _header("Dose-Response", "how many exposures make it recoverable?")
+        header = _header("Dose–Response", "how many exposures make it recoverable?")
         self.play(FadeIn(header), run_time=0.6)
 
         axes = Axes(
@@ -195,10 +195,10 @@ class CanaryDoseResponse(Scene):
 
         self.play(Create(axes), FadeIn(x_lbl), FadeIn(y_lbl), run_time=0.9)
 
-        b1 = _bottom("A dose-response curve over insertion count", color=SOFT_WHITE)
+        b1 = _bottom("A dose–response curve over insertion count", color=SOFT_WHITE)
         self.play(FadeIn(b1), run_time=0.4)
 
-        # Curve, saturating but with a clearly non-zero floor at x=1
+        # Curve — saturating but with a clearly non-zero floor at x=1
         def f(x):
             return 1 - np.exp(-0.22 * x)
 
@@ -214,7 +214,7 @@ class CanaryDoseResponse(Scene):
 
         self.play(Create(vline), Create(hline), FadeIn(p1), run_time=0.8)
 
-        b2 = _bottom(f"One exposure, recovery probability already ~ {y1:.2f}",
+        b2 = _bottom(f"One exposure — recovery probability already ≈ {y1:.2f}",
                      color=ACCENT, font_size=22)
         self.play(ReplacementTransform(b1, b2), run_time=0.5)
         self.wait(1.3)
@@ -229,8 +229,8 @@ class CanaryDoseResponse(Scene):
 # Scene 3 — RandomLabelsFitAnyway
 # ══════════════════════════════════════════════════════════════════
 class RandomLabelsFitAnyway(Scene):
-    """Two panels. Left: real labels, train and test both drop. Right: random
-    labels, train drops to zero, test plateaus at chance. The gap is the point."""
+    """Two panels. Left: real labels — train and test both drop. Right: random
+    labels — train drops to zero, test plateaus at chance. The gap is the point."""
 
     def construct(self):
         self.camera.background_color = BG_COLOR
@@ -275,13 +275,14 @@ class RandomLabelsFitAnyway(Scene):
         def train_real(t):    return 2.3 * np.exp(-0.05 * t) + 0.02
         def test_real(t):     return 2.3 * np.exp(-0.04 * t) + 0.45
         def train_random(t):  return 2.3 * np.exp(-0.035 * t) + 0.03
-        def test_random(t):   return 2.302 - 0.02 * np.exp(-0.01 * t)  # stays ~ ln(10) ~ 2.3
+        def test_random(t):   return 2.302 - 0.02 * np.exp(-0.01 * t)  # stays ≈ ln(10) ≈ 2.3
 
         train_real_curve  = left_axes.plot(train_real,  x_range=[0, 100], color=GREEN_C, stroke_width=3)
         test_real_curve   = left_axes.plot(test_real,   x_range=[0, 100], color=TEAL, stroke_width=3)
         train_rand_curve  = right_axes.plot(train_random, x_range=[0, 100], color=GREEN_C, stroke_width=3)
         test_rand_curve   = right_axes.plot(test_random,  x_range=[0, 100], color=MEMBER_COLOR, stroke_width=3)
 
+        # Dashed for test curves so the distinction is visual
         test_real_curve.set_stroke(color=TEAL, width=3)
         test_rand_curve.set_stroke(color=MEMBER_COLOR, width=3)
 
@@ -292,7 +293,7 @@ class RandomLabelsFitAnyway(Scene):
         test_rand_end  = Text("test",  font_size=14, color=MEMBER_COLOR).next_to(right_axes.c2p(100, test_random(100)),  RIGHT, buff=0.08)
 
         # Beat 1: both train losses race down
-        b1 = _bottom("Both networks drive training loss to zero...", color=SOFT_WHITE)
+        b1 = _bottom("Both networks drive training loss to zero…", color=SOFT_WHITE)
         self.play(FadeIn(b1), run_time=0.4)
 
         self.play(
@@ -303,7 +304,7 @@ class RandomLabelsFitAnyway(Scene):
         self.wait(0.4)
 
         # Beat 2: reveal the test curves
-        b2 = _bottom("...but look at the test loss.", color=ACCENT, font_size=22)
+        b2 = _bottom("…but look at the test loss.", color=ACCENT, font_size=22)
         self.play(ReplacementTransform(b1, b2), run_time=0.5)
 
         self.play(
@@ -313,7 +314,7 @@ class RandomLabelsFitAnyway(Scene):
         self.play(FadeIn(test_real_end), FadeIn(test_rand_end), run_time=0.4)
         self.wait(0.6)
 
-        # Highlight the gap on the right panel
+        # Highlight the gap on the right panel — a brace or a vertical arrow
         gap_bottom = right_axes.c2p(95, train_random(95))
         gap_top = right_axes.c2p(95, test_random(95))
         gap_line = DoubleArrow(
@@ -324,7 +325,7 @@ class RandomLabelsFitAnyway(Scene):
         self.play(GrowFromCenter(gap_line), run_time=0.7)
 
         # Beat 3: implication
-        b3 = _bottom("Same architecture, same optimizer, fitting pure noise.",
+        b3 = _bottom("Same architecture, same optimizer — fitting pure noise.",
                      color=ACCENT, font_size=22)
         self.play(ReplacementTransform(b2, b3), run_time=0.6)
         self.wait(2.5)
@@ -341,7 +342,7 @@ class MembershipInferenceLoupe(Scene):
     def construct(self):
         self.camera.background_color = BG_COLOR
 
-        header = _header("Where the Attack Lives", "loss distributions, members vs. non-members")
+        header = _header("Where the Attack Lives", "loss distributions — members vs. non-members")
         self.play(FadeIn(header), run_time=0.6)
 
         axes = Axes(
@@ -356,7 +357,8 @@ class MembershipInferenceLoupe(Scene):
         y_lbl = Text("density", font_size=18, color=SOFT_WHITE).rotate(PI / 2).next_to(axes, LEFT, buff=0.2)
         self.play(Create(axes), FadeIn(x_lbl), FadeIn(y_lbl), run_time=0.8)
 
-        # Two distributions: bulks overlap, low-loss tail separates.
+        # Two distributions — calibrated so bulk overlaps but low-loss tail separates.
+        # Members: heavier left tail. Non-members: centred slightly higher.
         def member_dist(x):
             return 0.7 * np.exp(-((x - 1.1) ** 2) / 0.55) + 0.25 * np.exp(-((x - 0.08) ** 2) / 0.02)
 
@@ -366,7 +368,7 @@ class MembershipInferenceLoupe(Scene):
         member_curve = axes.plot(member_dist, x_range=[0, 4], color=MEMBER_COLOR, stroke_width=3)
         nonmember_curve = axes.plot(nonmember_dist, x_range=[0, 4], color=NONMEMBER_COLOR, stroke_width=3)
 
-        # Legend, top-right corner (not centre)
+        # Legend — top-right corner, NOT in the centre
         legend_m = VGroup(
             Line(ORIGIN, RIGHT * 0.3, color=MEMBER_COLOR, stroke_width=4),
             Text("members (trained on)", font_size=14, color=MEMBER_COLOR),
@@ -388,7 +390,7 @@ class MembershipInferenceLoupe(Scene):
         )
         self.wait(0.6)
 
-        # Beat 2: loupe rectangle on the low-loss tail
+        # Beat 2: loupe — rectangle in the low-loss tail
         tail_rect = Rectangle(
             width=axes.c2p(0.4, 0)[0] - axes.c2p(0, 0)[0],
             height=axes.c2p(0, 1.0)[1] - axes.c2p(0, 0)[1],
@@ -400,11 +402,11 @@ class MembershipInferenceLoupe(Scene):
              0]
         )
 
-        b2 = _bottom("Zoom into the low-loss tail...", color=ACCENT)
+        b2 = _bottom("Zoom into the low-loss tail…", color=ACCENT)
         self.play(ReplacementTransform(b1, b2), Create(tail_rect), run_time=0.8)
         self.wait(0.5)
 
-        # Beat 3: swap in enlarged zoom of the tail
+        # Beat 3: fade the overview, swap in an enlarged "zoom" of the tail
         self.play(
             member_curve.animate.set_opacity(0.15),
             nonmember_curve.animate.set_opacity(0.15),
@@ -462,6 +464,7 @@ class LibraryCardCatalog(Scene):
         header = _header("The Librarian's Problem", "what does a faithful index card look like?")
         self.play(FadeIn(header), run_time=0.6)
 
+        # Two cards, side by side
         card_w, card_h = 4.6, 4.2
 
         left_card = RoundedRectangle(
@@ -487,16 +490,16 @@ class LibraryCardCatalog(Scene):
         self.play(FadeIn(b1), run_time=0.5)
         self.wait(0.4)
 
-        # Left card: a compressed summary of the genre
+        # ───── Left card: a compressed summary of the genre ─────
         left_header = Text("GENRE INDEX", font_size=16, color=NONMEMBER_COLOR, weight=BOLD)
         left_bullets = VGroup(
-            Text("*  boy meets girl, obstacles arise", font_size=18, color=SOFT_WHITE),
-            Text("*  misunderstandings in the middle", font_size=18, color=SOFT_WHITE),
-            Text("*  reconciliation by chapter 20", font_size=18, color=SOFT_WHITE),
-            Text("*  280 pages, happy ending", font_size=18, color=SOFT_WHITE),
+            Text("•  boy meets girl, obstacles arise", font_size=18, color=SOFT_WHITE),
+            Text("•  misunderstandings in the middle", font_size=18, color=SOFT_WHITE),
+            Text("•  reconciliation by chapter 20", font_size=18, color=SOFT_WHITE),
+            Text("•  280 pages, happy ending", font_size=18, color=SOFT_WHITE),
         ).arrange(DOWN, aligned_edge=LEFT, buff=0.22)
         left_stats = Text(
-            "covers ~ 1,000 books", font_size=14, color=NONMEMBER_COLOR,
+            "covers ≈ 1,000 books", font_size=14, color=NONMEMBER_COLOR,
         )
         left_body = VGroup(left_header, left_bullets, left_stats).arrange(DOWN, aligned_edge=LEFT, buff=0.35)
         left_body.move_to(left_card.get_center())
@@ -507,12 +510,13 @@ class LibraryCardCatalog(Scene):
         self.play(FadeIn(left_stats), run_time=0.4)
         self.wait(0.3)
 
-        # Right card: what a faithful summary of a singleton looks like
+        # ───── Right card: what a faithful summary of a singleton looks like ─────
         right_header = Text("DIARY INDEX", font_size=16, color=TAIL_COLOR, weight=BOLD)
 
+        # The diary transcription — tight lines so it reads like a transcribed page
         diary_lines = [
             "March 14. Rain all morning.",
-            "I wrote to Mother, told her",
+            "I wrote to Mother — told her",
             "nothing of the letter from P.",
             "In the afternoon, walked to",
             "the bridge. The water was",

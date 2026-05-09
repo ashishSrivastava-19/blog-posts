@@ -17,7 +17,7 @@ This is **Part 3** of a 6-part series on *From Gradients to Correlated Noise*.
 [← Post 2: How One Data Point Steers the Entire Model](../02-per-sample-gradients/index.qmd) · [View the series home →](../../index.qmd)
 :::
 
-## A Model That Knew Where Someone Lived
+## A model that knew where someone lived
 
 In 2021, a team of researchers sat down with GPT-2, OpenAI's then-flagship language model, and asked it to complete a short, innocent-looking prefix. Not a jailbreak. Not a clever adversarial prompt. They just asked.
 
@@ -29,7 +29,7 @@ This is the fact we want you to sit with for a moment, because the rest of this 
 
 First, the simplest version of the problem.
 
-## One Sentence, Seen Once, Remembered Forever
+## One sentence, seen once, remembered forever
 
 In 2019, before the GPT-2 extraction paper, Carlini and colleagues ran a cleaner experiment [@carlini2019secret]. They took a standard character-level language model, trained on the Penn Treebank corpus. Into that corpus they inserted, exactly one time, a single synthetic sentence of the form:
 
@@ -59,7 +59,7 @@ You might object: surely this depends on how many times the canary appeared? May
 
 There is no "too rare to matter" threshold. Every training example is, in principle, a canary.
 
-## Capacity Is Cheap
+## Capacity is cheap
 
 So how is this possible? Why does a model that works beautifully on unseen data also retain, with near perfect accuracy, a sentence it saw once three weeks ago?
 
@@ -84,7 +84,7 @@ The consequence for privacy is immediate. If a network's capacity is vast enough
 Overfitting is when the train-test gap is large. Memorization can happen when the train-test gap is *zero*. A network can generalize beautifully on the distribution *and* have memorized specific training examples verbatim; the two axes are independent. Regularization narrows the train-test gap, and it barely moves the per-example memorization of tail examples. We will come back to this.
 :::
 
-## You Don't Need the Weights, Only the Confidence
+## You don't need the weights, only the confidence
 
 Capacity explains why the model *could* remember. It doesn't yet explain why an outside observer, with no access to weights or gradients, can extract what was remembered. For that we need the attack side of the ledger.
 
@@ -113,7 +113,7 @@ The natural response at this point is the one everyone has. *Fine. So just ident
 
 This is where the story bends.
 
-## Why the Tail Must Be Memorized
+## Why the tail must be memorized
 
 In 2020, Vitaly Feldman published a paper with a title that tells you most of the argument: *Does Learning Require Memorization? A Short Tale about a Long Tail* [@feldman2020does]. It is a theory paper; it proves a lower bound.
 
@@ -201,7 +201,7 @@ fig.show()
 
 Put this next to what we already know about attacks. The attacker who runs membership inference is looking for examples with unusually low loss, the ones the model is most confident about. The examples with unusually low loss are, disproportionately, the ones the model has memorized. The ones the model has memorized are, disproportionately, the ones on the long tail. **The long tail is where the memorization lives, and the memorization is what makes the attack work.**
 
-## No Post-Hoc Fix
+## No post-hoc fix
 
 This is the uncomfortable geometry of the situation. Three facts, each defensible on its own:
 
