@@ -17,7 +17,7 @@ This is **Part 4** of a 6-part series on *From Gradients to Correlated Noise*.
 [← Post 3: When Models Remember Too Much](../03-when-models-remember/index.qmd) · [View the series home →](../../index.qmd)
 :::
 
-## A Game You Are Already Playing
+## A game you are already playing
 
 Imagine a game with two players. The **curator** holds a database. The **adversary** wants to know whether one specific person — say, you — is a row in it. The curator cannot simply refuse to publish; they have a job to do. So they commit, in advance, to a *mechanism*: a randomized procedure that takes a database in and gives an output out. They run it, send the output, and the adversary, looking only at that output, has to decide: was your row in there or not?
 
@@ -37,7 +37,7 @@ The previous post in this series ended with a related problem in a different cos
 
 This post is about the only known way the curator can win.
 
-## A Definition That Does Not Depend On What The Attacker Knows
+## A definition that does not depend on what the attacker knows
 
 Stanley Warner, a Canadian sociologist, ran into a softer version of this problem in 1965 [@warner1965randomized]. He wanted to estimate the prevalence of an embarrassing trait in a population — the canonical example was tax cheating, but you can use any sensitive yes/no question — and he knew the same thing every survey designer knew: people do not answer such questions truthfully if their answer is on a clipboard. Warner's solution was an algorithm.
 
@@ -152,7 +152,7 @@ fig.show()
 
 At $\varepsilon = 0.1$, the adversary's posterior is hemmed into the interval $[0.475, 0.525]$ — a swing of five percentage points off a 50% prior. At $\varepsilon = 1$, the interval is roughly $[0.27, 0.73]$ — substantial movement. At $\varepsilon = 10$, the interval is $[0.0000454, 0.99995]$, which is to say *no privacy at all*. The same number, three orders of magnitude apart, three radically different guarantees. Apple has reported per-query $\varepsilon$ values around 4 in some deployments. The 2020 US Census redistricting product used a global $\varepsilon \approx 19.6$ across all queries [@garfinkel2019understanding]. Academic DP-SGD papers commonly target $\varepsilon = 8$. There is no consensus. **$\varepsilon$ is a social parameter, not a technical one** — it is the comparison currency of a guarantee, not the guarantee itself.
 
-## Why The Old Defenses Failed The Same Test
+## Why the old defenses failed the same test
 
 We have a definition. Now we can run the old anonymization defenses through it: did they satisfy $\varepsilon$-DP for any finite $\varepsilon$? The dominant pre-2006 framework for releasing tabular data was **k-anonymity**: ensure every record in the released table is indistinguishable from at least $k-1$ others on the *quasi-identifier* columns (the ZIP/DOB/sex-like attributes that, while not direct identifiers, can be used to triangulate). You generalize the columns — round ZIP to a coarser zone, bucket dates of birth into years — until every row sits in an equivalence class of size at least $k$. The mechanism is *deterministic*. Add or remove one row that has unusual quasi-identifiers and the equivalence classes restructure: an output that was possible before becomes impossible after, or vice versa. The ratio of probabilities is $\infty$, not $e^\varepsilon$ for any finite $\varepsilon$. The Sweeney join is the rule, not the exception.
 
@@ -162,7 +162,7 @@ The deeper problem, which patches cannot reach, is that **every additional colum
 
 Each of these defenses bounds an attacker we already imagined. The DP definition we have just stated bounds *any* attacker — whatever they know, however they query — and the old defenses fail it for any finite $\varepsilon$. That is the difference, and it is not a difference of degree.
 
-## Three Properties That Make It Engineerable
+## Three properties that make it engineerable
 
 Once you have the definition, the work is to figure out what you can build with it. Three properties, each a rule for how the game extends, do most of that work.
 
@@ -180,7 +180,7 @@ You will not be surprised to learn that the budget runs out faster than you woul
 
 These three properties are not three theorems. They are the same theorem in three costumes. Composition is the rule when the same data flows through multiple mechanisms. Post-processing is the rule when the output flows through multiple functions. Group privacy is the rule when multiple rows belong to the same logical entity. In each case the bound on attacker power is preserved or degrades in a way you can write down. That is what makes differential privacy *engineerable* in a way no anonymization patch ever was.
 
-## What This Game Does Not Capture, And Why That's Honest
+## What this game does not capture, and why that's honest
 
 Three misconceptions are worth correcting before we leave.
 

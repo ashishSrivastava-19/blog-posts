@@ -17,7 +17,7 @@ This is **Part 2** of a 6-part series on *From Gradients to Correlated Noise*.
 [View the series home →](../../index.qmd)
 :::
 
-## The Slope Had Voices
+## The slope had voices
 
 In the last post, we showed that the gradient — that vector of numbers you compute every training step — is not just a direction to roll the ball. It's a communication channel from the data to the model, with enough bandwidth to reconstruct human faces.
 
@@ -27,7 +27,7 @@ Today, we separate the ropes.
 
 We're going to decompose that net force into individual contributions, measure how much each one matters, and discover something uncomfortable: a handful of training examples dominate your model's behavior. They leave fingerprints so strong that you can trace the model's decisions back to specific data points — and that traceability is both a powerful diagnostic tool and a privacy catastrophe.
 
-## Separating the Ropes
+## Separating the ropes
 
 Remember the picture from Post 1: you're a ball on a mountain in pitch darkness, and the slope you feel is the average of forces from every data point in the batch. Each one tugs the ball in its preferred direction. The gradient you experience is the net result.
 
@@ -112,7 +112,7 @@ That heavy tail isn't noise. It's signal. The red bars — the data points with 
 
 The question is: *how much* influence exactly? And can we measure it beyond raw gradient norms?
 
-## The Simplest Question First
+## The simplest question first
 
 Here's the most natural thing to ask: if I want to know which training example is responsible for a particular prediction, why not just check whose gradient pointed in the same direction as the model's actual update?
 
@@ -207,7 +207,7 @@ That's the first surprise: **influence is absurdly concentrated.** A tiny fracti
 
 But TracIn misses something. It treats every direction in parameter space the same — as if the loss landscape were a flat, featureless plane. It isn't.
 
-## The Shape of the Chamber
+## The shape of the chamber
 
 Go back to the mountain. The mountain has curvature. Some directions are knife-edges — a small step dramatically changes the loss. Other directions are broad plateaus — you could walk for miles and barely notice a difference. The curvature at any point is encoded in the **Hessian matrix** $H$, the matrix of second derivatives of the loss.
 
@@ -236,7 +236,7 @@ In plain English: the effect of removing one data point from your training set i
 </video>
 
 ::: {.callout-tip}
-## The Key Insight
+## The key insight
 Influence is not just about how hard you pull. It's about *where you're pulling*. A gentle push on an ice rink (gradient along a flat, unconstrained direction) moves the ball further than a hard shove against a cliff wall (gradient along a steep, tightly curved direction). The Hessian determines where the landscape resists and where it yields.
 :::
 
@@ -245,7 +245,7 @@ Influence is not just about how hard you pull. It's about *where you're pulling*
 The formula comes from a first-order Taylor expansion of the leave-one-out retraining objective. If we weight data point $z$ by a small $\epsilon$ and ask how the optimal parameters $\hat{\theta}$ shift, the implicit function theorem gives us $\frac{d\hat{\theta}}{d\epsilon} = -H_{\hat{\theta}}^{-1} \nabla_\theta \mathcal{L}(z, \hat{\theta})$. The Hessian inverse acts as a propagator — it translates a local perturbation (one data point's gradient) into a global effect (how much the converged parameters shift). See [@koh2017understanding] for the full derivation.
 :::
 
-## The Fingerprint That Won't Wash Off
+## The fingerprint that won't wash off
 
 Let's bring everything back to the thread running through this series.
 
@@ -269,7 +269,7 @@ This is a privacy problem that goes deeper than any particular attack or vulnera
 
 Here's a detail to file away for later: the per-sample gradient norm $\|g_i\|$ — the strength of each data point's pull — is *exactly* the quantity that DP-SGD clips. The defense against these fingerprints starts by capping how hard any single data point can pull on the ball. But that's Post 5.
 
-## The Question We Haven't Asked
+## The question we haven't asked
 
 We've shown that individual data points leave measurable fingerprints on the model. We've measured their influence, and we've seen the heavy tail — a few data points matter enormously.
 

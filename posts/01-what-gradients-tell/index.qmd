@@ -17,7 +17,7 @@ This is **Part 1** of a 6-part series on *From Gradients to Correlated Noise*.
 [View the series home →](../../index.qmd)
 :::
 
-## A Gradient That Remembered a Face
+## A gradient that remembered a face
 
 In 2019, a team at MIT showed something that, when we first read about it, genuinely unsettled us.
 
@@ -29,7 +29,7 @@ Understanding *why* turns out to be the key to some of the biggest open problems
 
 It starts with a ball on a mountain.
 
-## A Ball on a Mountain You Can't See
+## A ball on a mountain you can't see
 
 Here's the gradient descent update rule:
 
@@ -58,7 +58,7 @@ That's all there is. Every optimizer you've ever used — SGD, Adam, AdaGrad, RM
   <source src="../../animations/media/videos/scenes/1080p60/UpdateRuleDissected.mp4" type="video/mp4">
 </video>
 
-## The Slope Is a Tug of War
+## The slope is a tug of war
 
 Most explanations stop there. Ball rolls downhill, loss decreases, the end. But they skip the most important question: **where does the slope actually come from?**
 
@@ -81,11 +81,11 @@ This is why that MIT team could reconstruct faces from gradients. The slope does
 </video>
 
 ::: {.callout-tip}
-## The Key Insight
+## The key insight
 Think of it like superposition in physics. The electric field at a point is the sum of contributions from every charge. The gradient at a parameter is the sum of contributions from every data point. Remove one charge, the field shifts. Remove one data point, the gradient shifts. It's not a metaphor — it's the same math.
 :::
 
-## When You Can Only Feel a Patch
+## When you can only feel a patch
 
 So if the full gradient over all your data gives the most accurate slope reading, why would you ever settle for a noisy estimate from just 64 examples?
 
@@ -205,7 +205,7 @@ The noise isn't a tax you pay for computational savings. It's a free regularizer
 SGD noise is **anisotropic** — it's larger along directions where the landscape curves sharply, and smaller where it's flat. The ball preferentially bounces *out of* narrow grooves while settling into broad ones. It's structured exploration, not random stumbling.
 :::
 
-## The Mountain Is Stranger Than You Think
+## The mountain is stranger than you think
 
 We've been drawing this as a gentle terrain with some valleys. The 2D contour plot above reinforces that picture.
 
@@ -272,7 +272,7 @@ fig.show()
 
 So forget the picture of a ball on a gentle hill. The real picture is more like this: a ball navigating a million-dimensional fog, where the ground keeps shifting under your feet, most "traps" turn out to be doorways to other rooms, and the imprecise feel of the slope beneath you is exactly why you find the exit.
 
-## The Slope Remembers the Data
+## The slope remembers the data
 
 Let's bring this back to where we started — that face, reconstructed from a gradient.
 
